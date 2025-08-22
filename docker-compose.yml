@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  web-tracking-lab:
+    build: .
+    container_name: web-tracking-lab
+    ports:
+      - "8080:8080"  # Page server
+      - "8081:8081"  # Beacon server
+    restart: unless-stopped

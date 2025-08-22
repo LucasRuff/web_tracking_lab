@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Tracking Lab</title>
+  <style>
+    html, body {
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+    }
+    header {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 1.5rem 1rem;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.75rem;
+    }
+    main {
+      max-width: 680px;
+      margin: 1.25rem auto;
+      padding: 0 1rem;
+    }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.6rem 0.7rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-top: 0.35rem;
+    }
+    input[type="checkbox"] {
+      margin-right: 0.5rem;
+    }
+    button {
+      display: inline-block;
+      margin-top: 0.85rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .muted { color: #6b7280; font-size: 0.9rem; }
+    pre {
+      background: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Web Tracking Lab</h1>
+  </header>
+
+  <main>
+    <div class="card">
+      <p class="muted">Enter a cookie name and value. Check "Persistent" to make it last 10 minutes.</p>
+      <label for="cookieName">Cookie name</label>
+      <input id="cookieName" type="text" placeholder="e.g., theme" />
+
+      <label for="cookieValue">Cookie value</label>
+      <input id="cookieValue" type="text" placeholder="e.g., dark" />
+
+      <label style="margin-top: 0.75rem;">
+        <input id="persistentCookie" type="checkbox" /> Persistent cookie (10 min)
+      </label>
+
+      <button id="setCookieBtn" type="button">Set Cookie</button>
+      <div id="status" class="muted" style="margin-top:0.5rem"></div>
+    </div>
+
+    <div class="card">
+  <p class="muted">Click to send a web beacon with the current time.</p>
+  <button id="sendBeaconBtn" type="button">Send Beacon</button>
+  <div id="beaconStatus" class="muted" style="margin-top:0.5rem"></div>
+</div>
+<div class="card">
+  <p class="muted">Hover over the square — a beacon will send how long you hovered.</p>
+  <div id="hoverSquare"></div>
+  <div id="hoverStatus" class="muted" style="margin-top:0.5rem"></div>
+</div>
+
+<style>
+  #hoverSquare {
+    width: 100px;
+    height: 100px;
+    background-color: green;
+    margin-top: 0.5rem;
+  }
+</style>
+  </main>
+
+  <script>
+    function setCookie(name, value, persistent) {
+      if (!name) return false;
+      const nv = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+      let cookieStr = nv + "; path=/; SameSite=Lax";
+      if (persistent) {
+        const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        cookieStr += "; expires=" + expires.toUTCString();
+      }
+      document.cookie = cookieStr;
+      return true;
+    }
+
+    document.getElementById("setCookieBtn").addEventListener("click", () => {
+      const name = document.getElementById("cookieName").value.trim();
+      const value = document.getElementById("cookieValue").value.trim();
+      const persistent = document.getElementById("persistentCookie").checked;
+      const ok = setCookie(name, value, persistent);
+      const status = document.getElementById("status");
+      if (ok) {
+        status.textContent = `Cookie set: ${name}=${value} (${persistent ? "persistent" : "session"})`;
+        status.style.color = "#065f46";
+      } else {
+        status.textContent = "Please provide a cookie name.";
+        status.style.color = "#b91c1c";
+      }
+    });
+
+
+document.getElementById("sendBeaconBtn").addEventListener("click", () => {
+    const now = new Date().toISOString();
+    const img = document.createElement("img");
+    img.src = `http://10.210.103.57:8081/beacon?ts=${encodeURIComponent(now)}`;
+    img.width = 1;
+    img.height = 1;
+    img.style.display = "none"; // keep it invisible
+    document.body.appendChild(img);
+    document.getElementById("beaconStatus").textContent = `Beacon sent at ${now}`;
+  });
+   let hoverStartTime = null;
+
+  const hoverSquare = document.getElementById("hoverSquare");
+  const hoverStatus = document.getElementById("hoverStatus");
+
+  hoverSquare.addEventListener("mouseenter", () => {
+    hoverStartTime = Date.now();
+    hoverStatus.textContent = "Hovering...";
+  });
+
+  hoverSquare.addEventListener("mouseleave", () => {
+    if (hoverStartTime !== null) {
+      const durationMs = Date.now() - hoverStartTime;
+      const durationSec = (durationMs / 1000).toFixed(2);
+      hoverStatus.textContent = `Hovered for ${durationSec} seconds`;
+
+      // Send beacon with duration
+      const img = document.createElement("img");
+      img.src = `http://10.210.103.57:8081/hover-beacon?duration=${encodeURIComponent(durationSec)}`;
+      img.width = 1;
+      img.height = 1;
+      img.style.display = "none";
+      document.body.appendChild(img);
+
+      hoverStartTime = null;
+    }
+  });
+
+</script>
+</body>
+</html>
