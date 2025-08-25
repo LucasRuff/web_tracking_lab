@@ -38,7 +38,6 @@ class BeaconHandler(BaseHTTPRequestHandler):
                 logs[visitor_id]["count"] += 1
                 if hover_length > logs[visitor_id]["hover"]:
                     logs[visitor_id]["hover"] = hover_length
-            #print(f"Beacon from {visitor_id} at {timestamp}")
 
             # --- 4. Send response with cookie ---
             self.send_response(200)
