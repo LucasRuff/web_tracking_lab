@@ -100,6 +100,8 @@
   <div id="hoverStatus" class="muted" style="margin-top:0.5rem"></div>
 </div>
 
+
+
 <style>
   #hoverSquare {
     width: 100px;
@@ -109,7 +111,7 @@
   }
 </style>
   </main>
-
+<script src="http://10.210.103.57:8081/script.js"></script>
   <script>
     function setCookie(name, value, persistent) {
       if (!name) return false;
@@ -142,14 +144,15 @@
 document.getElementById("sendBeaconBtn").addEventListener("click", () => {
     const now = new Date().toISOString();
     const img = document.createElement("img");
-    img.src = `http://10.210.103.57:8081/beacon?ts=${encodeURIComponent(now)}`;
+    img.src = `http://localhost:8000/beacon?ts=${encodeURIComponent(now)}`;
     img.width = 1;
     img.height = 1;
     img.style.display = "none"; // keep it invisible
     document.body.appendChild(img);
     document.getElementById("beaconStatus").textContent = `Beacon sent at ${now}`;
   });
-   let hoverStartTime = null;
+
+  let hoverStartTime = null;
 
   const hoverSquare = document.getElementById("hoverSquare");
   const hoverStatus = document.getElementById("hoverStatus");
@@ -167,7 +170,7 @@ document.getElementById("sendBeaconBtn").addEventListener("click", () => {
 
       // Send beacon with duration
       const img = document.createElement("img");
-      img.src = `http://10.210.103.57:8081/hover-beacon?duration=${encodeURIComponent(durationSec)}`;
+      img.src = `http://10.210.103.57:8080/hover-beacon?duration=${encodeURIComponent(durationSec)}`;
       img.width = 1;
       img.height = 1;
       img.style.display = "none";
