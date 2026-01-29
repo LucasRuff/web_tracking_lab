@@ -27,7 +27,7 @@ class BeaconHandler(BaseHTTPRequestHandler):
                 <div id="logContainer"></div>
                 <script>
                 async function updateLogs() {
-                    const res = await fetch("/ai105/logs/data");
+                    const res = await fetch("/logs/data");
                     const tableHtml = await res.text();
                     document.getElementById("logContainer").innerHTML = tableHtml;
                 }
