@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import uuid
 import time
+import os
 from urllib.parse import urlparse, parse_qs
 import threading
 
@@ -27,7 +27,7 @@ class BeaconHandler(BaseHTTPRequestHandler):
                 <div id="logContainer"></div>
                 <script>
                 async function updateLogs() {
-                    const res = await fetch("/logs/data");
+                    const res = await fetch("/ai105/logs/data");
                     const tableHtml = await res.text();
                     document.getElementById("logContainer").innerHTML = tableHtml;
                 }
@@ -54,12 +54,26 @@ class BeaconHandler(BaseHTTPRequestHandler):
             
         elif self.path.startswith("/instructor-solution"):
             try:
-                with open("index.html", "rb") as f:
+                with open("index.html", "r", encoding="utf-8") as f:
                     content = f.read()
+                
+                # Dynamically determine the server URL from the Host header
+                host = self.headers.get("Host", "localhost:8080")
+                # Determine if we should use https (check for common indicators)
+                forwarded_proto = self.headers.get("X-Forwarded-Proto", "")
+                if forwarded_proto == "https" or host.endswith(".run.app") or host.endswith(".cloud.run"):
+                    scheme = "https"
+                else:
+                    scheme = "http"
+                server_url = f"{scheme}://{host}"
+                
+                # Replace placeholder with actual server URL
+                content = content.replace("{{SERVER_URL}}", server_url)
+                
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(content)
+                self.wfile.write(content.encode("utf-8"))
             except FileNotFoundError:
                 self.send_response(404)
                 self.end_headers()
@@ -78,17 +92,15 @@ class BeaconHandler(BaseHTTPRequestHandler):
             js = r"""
             (function() {
                 // --- 1. Ensure we have a user ID ---
-                let uid = localStorage.getItem("visitor_id");
+                let uid = localStorage.getItem("third_party_id");
                 if (!uid) {
                     uid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
                         const r = Math.random() * 16 | 0;
                         const v = c === 'x' ? r : (r & 0x3 | 0x8);
                         return v.toString(16);
                     });
-                    localStorage.setItem("visitor_id", uid);
+                    localStorage.setItem("third_party_id", uid);
                 }
-                // Also put ID in a cookie
-                document.cookie = "visitor_id=" + uid + "; path=/";
 
                 // --- 2. Discover server base URL from this script's src ---
                 const scriptUrl = document.currentScript.src;
@@ -98,7 +110,7 @@ class BeaconHandler(BaseHTTPRequestHandler):
                 const origin = window.location.origin;
 
                 // --- 4. Request widget (HTML + JS) ---
-                fetch(serverBase + "/hover-widget?uid=" + encodeURIComponent(uid) + "&origin=" + encodeURIComponent(origin), {
+                fetch(serverBase + "/hover-widget?third_party_id=" + encodeURIComponent(uid) + "&origin=" + encodeURIComponent(origin), {
                     credentials: "include"
                 })
                 .then(r => r.text())
@@ -136,11 +148,13 @@ class BeaconHandler(BaseHTTPRequestHandler):
             # Extract visitor ID from query
             query = urlparse(self.path).query
             params = parse_qs(query)
-            visitor_id = params.get("uid", [None])[0]
+            visitor_id = params.get("third_party_id", [None])[0]
             origin = params.get("origin", ["*"])[0]
 
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            if visitor_id:
+                self.send_header("Set-Cookie", f"third_party_id={visitor_id}; Path=/; SameSite=None; Secure;")
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
@@ -162,7 +176,7 @@ class BeaconHandler(BaseHTTPRequestHandler):
                     if (hoverStart !== null) {{
                         const duration = Date.now() - hoverStart;
                         const origin = window.location.origin;
-                        fetch(`${{serverBase}}/hover-beacon?vid=${{encodeURIComponent(visitorId)}}&duration=${{duration}}&origin=${{encodeURIComponent(origin)}}`, {{
+                        fetch(`${{serverBase}}/hover-beacon?third_party_id=${{encodeURIComponent(visitorId)}}&duration=${{duration}}&origin=${{encodeURIComponent(origin)}}`, {{
                             method: "GET",
                             credentials: "include"
                         }});
@@ -177,9 +191,9 @@ class BeaconHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/hover-beacon"):
             query = urlparse(self.path).query
             params = parse_qs(query)
-            visitor_id = params.get("vid", [None])[0]
+            visitor_id = params.get("third_party_id", [None])[0]
             origin = params.get("origin", ["*"])[0]
-
+            had_visitor_id = (visitor_id!=None)
 
             #look for vid in query params first; look for a cookie if not sent in query param
             if not visitor_id:
@@ -187,7 +201,7 @@ class BeaconHandler(BaseHTTPRequestHandler):
                 if cookie_header:
                     try:
                         cookies = dict(cookie.split("=", 1) for cookie in cookie_header.split("; "))
-                        visitor_id = cookies.get("visitor_id")
+                        visitor_id = cookies.get("third_party_id")
                     except:
                         pass
 
@@ -209,7 +223,8 @@ class BeaconHandler(BaseHTTPRequestHandler):
 
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
-            self.send_header("Set-Cookie", f"visitor_id={visitor_id}; Path=/")
+            if not had_visitor_id:
+                self.send_header("Set-Cookie", f"third_party_id={visitor_id}; Path=/; SameSite=None; Secure;")
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
@@ -219,17 +234,17 @@ class BeaconHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-if __name__ == "__main__":
-    PORT = 8081
-
-    server = HTTPServer(("0.0.0.0", PORT), BeaconHandler)
-    print(f"Beacon server running at http://0.0.0.0:{PORT}")
-    server.serve_forever()
-
 def clear_logs_periodically():
     while True:
         time.sleep(3600)
         with logs_lock:
             logs.clear()
 
-threading.Thread(target=clear_logs_periodically, daemon=True).start()
+if __name__ == "__main__":
+    PORT = int(os.environ.get("PORT", 8080))
+
+    threading.Thread(target=clear_logs_periodically, daemon=True).start()
+    server = HTTPServer(("0.0.0.0", PORT), BeaconHandler)
+    print(f"Beacon server running at http://0.0.0.0:{PORT}")
+    server.serve_forever()
+    clear_logs_periodically()

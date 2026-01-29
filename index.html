@@ -111,7 +111,7 @@
   }
 </style>
   </main>
-<script src="http://10.210.103.57:8081/script.js"></script>
+<script src="{{SERVER_URL}}/script.js"></script>
   <script>
     function setCookie(name, value, persistent) {
       if (!name) return false;
@@ -144,7 +144,7 @@
 document.getElementById("sendBeaconBtn").addEventListener("click", () => {
     const now = new Date().toISOString();
     const img = document.createElement("img");
-    img.src = `http://localhost:8080/beacon?ts=${encodeURIComponent(now)}`;
+    img.src = `{{SERVER_URL}}/beacon?ts=${encodeURIComponent(now)}`;
     img.width = 1;
     img.height = 1;
     img.style.display = "none"; // keep it invisible
@@ -170,7 +170,7 @@ document.getElementById("sendBeaconBtn").addEventListener("click", () => {
 
       // Send beacon with duration
       const img = document.createElement("img");
-      img.src = `http://10.210.103.57:8080/hover-beacon?duration=${encodeURIComponent(durationSec)}`;
+      img.src = `{{SERVER_URL}}/hover-beacon?duration=${encodeURIComponent(durationSec)}`;
       img.width = 1;
       img.height = 1;
       img.style.display = "none";
