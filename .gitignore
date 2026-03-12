@@ -1,0 +1,7 @@
+# Ignore tar archive files in the repository root
+*.tar
+Dockerfile
+.dockerignore
+# You can also ignore other tar variants if needed
+# *.tar.gz
+# *.tgz

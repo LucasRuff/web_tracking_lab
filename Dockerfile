@@ -1,12 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
-COPY index.html page_server.py beacon_server.py start_servers.sh /app/
+COPY index.html beacon_server.py /app/
 
 # Expose both ports
+ENV PORT=8080
 EXPOSE 8080
-EXPOSE 8081
 
 # Run the shell script as entrypoint
-CMD ["./start_servers.sh"]
-RUN chmod +x /app/start_servers.sh
+CMD ["python", "beacon_server.py"]
