@@ -1,3 +1,7 @@
+# Self-hosting Web Tracking Lab
+
+Docker containerization is the recommended solution for running this server, and the DockerHub image at https://hub.docker.com/repository/docker/lucasruff/web_tracking_lab/ is the only tested and guaranteed solution. You may serve the container using a solution provided by your school's infrastructure, or you can host the server in a cloud environment. Steps for hosting using Google Cloud Run are provided for convenience.
+
 # Hosting Web Tracking Lab on Google Cloud Run
 
 This guide shows how to deploy the Web Tracking Lab using the pre-built Docker image from DockerHub.
